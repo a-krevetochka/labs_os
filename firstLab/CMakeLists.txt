@@ -4,10 +4,7 @@ project(firstLab C)
 
 set(CMAKE_C_STANDARD 11)
 
-include_directories(child)
+add_executable(parent main.c)
 
-add_executable(firstLab main.c)
-
-add_subdirectory(child)
-
-target_link_libraries(firstLab child)
+add_executable(child child_process.c
+child_process.h)

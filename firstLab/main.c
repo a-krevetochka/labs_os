@@ -1,4 +1,14 @@
-#include "child_process.h"
+//#include "child_process.h"
+#define _R_            "\x1b[31m" // red color for child process output color
+#define _G_            "\x1b[32m" // green color for parent process output color
+#define MAX_WORDS 100
+#define MAX_LENGTH 20
+#define FILE_NAME_SIZE 20
+#define CHILD "./child"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "sys/wait.h"
 
 int length_of_word(char *word) {
     int length = 0;
@@ -17,12 +27,16 @@ void copy_word(char *source, char *target) {
     target[index + 1] = '\0';
 }
 
-int create_process() {
-    pid_t pid = fork();
-    if (pid == -1) {
-        perror("child was not created");
+void error_handler(int result_of_creating){
+    if(result_of_creating == -1){
+        perror("creating error: ");
         exit(-1);
     }
+}
+
+int create_process() {
+    pid_t pid = fork();
+    error_handler(pid);
     return pid;
 }
 
@@ -32,6 +46,7 @@ int main() {
 
     printf(_R_"Enter the first filename: ");
     scanf("%s", &first_file_name);
+
     printf("Enter the second filename: ");
     scanf("%s", &second_file_name);
 
@@ -48,12 +63,12 @@ int main() {
     char long_words[MAX_WORDS][MAX_LENGTH];
     int short_count = 0, long_count = 0;
 
-    for (int i = 0; i < counter_of_words; i++) {
-        if (length_of_word(words[i]) < 10) {
-            copy_word(words[i], short_words[short_count]);
+    for (int index_of_word = 0; index_of_word < counter_of_words; index_of_word++) {
+        if (length_of_word(words[index_of_word]) < 10) {
+            copy_word(words[index_of_word], short_words[short_count]);
             short_count++;
         } else {
-            copy_word(words[i], long_words[long_count]);
+            copy_word(words[index_of_word], long_words[long_count]);
             long_count++;
         }
     }
@@ -61,50 +76,53 @@ int main() {
     long_words[long_count][0] = EOF;
 
     int pipe_fd_for_first_child[2];
-    if (pipe(pipe_fd_for_first_child) == -1) {
-        perror("first pipe was not created");
-        return -1;
-    }
+    error_handler(pipe(pipe_fd_for_first_child));
 
     pid_t first_process_id = create_process();
-    if (first_process_id == 0) {
-        printf(_G_"Child process start\n");
-        remove_vowels((int *) &pipe_fd_for_first_child, _G_);
-        
 
+    if (first_process_id == 0) {
+        printf(_G_"First child process start\n");
+
+        close(pipe_fd_for_first_child[1]);
+        dup2(pipe_fd_for_first_child[0], STDIN_FILENO);
+
+        execl(CHILD, CHILD, NULL);
     } else {
         printf(_R_"parent process ");
 
         close(pipe_fd_for_first_child[0]);
-
         write(pipe_fd_for_first_child[1], &first_file_name, sizeof(first_file_name));
-        write(pipe_fd_for_first_child[1], &long_words, sizeof(long_words));
+        for (int i = 0; i < MAX_WORDS; ++i) {
+            write(pipe_fd_for_first_child[1], &long_words[i], sizeof(long_words[i]));
+        }
         close(pipe_fd_for_first_child[1]);
-
         printf("Sent data to first process\n");
 
         wait(NULL);
 
-        printf(_R_"first process_finish\n");
+        printf(_R_"first process finish\n");
     }
 
     int pipe_fd_for_second_child[2];
-    if (pipe(pipe_fd_for_second_child) == -1) {
-        perror("first pipe was not created");
-        return -1;
-    }
+    error_handler(pipe(pipe_fd_for_second_child));
 
     pid_t second_process_id = create_process();
-    if (second_process_id == 0) {
-        printf(_P_"Child process start\n");
-        remove_vowels((int *) &pipe_fd_for_second_child, _P_);
 
+    if (second_process_id == 0) {
+        printf(_G_"Second child process start\n");
+        close(pipe_fd_for_first_child[1]);
+        dup2(pipe_fd_for_first_child[0], STDIN_FILENO);
+        execl(CHILD, CHILD, NULL);
     } else {
         printf(_R_"parent process ");
+
         close(pipe_fd_for_first_child[0]);
         write(pipe_fd_for_first_child[1], &second_file_name, sizeof(second_file_name));
-        write(pipe_fd_for_first_child[1], &short_words, sizeof(short_words));
+        for (int i = 0; i < MAX_WORDS; ++i) {
+            write(pipe_fd_for_first_child[1], &short_words[i], sizeof(long_words[i]));
+        }
         close(pipe_fd_for_first_child[1]);
+
         printf("Sent data to second process\n");
         wait(NULL);
         printf(_R_"second process_finish\n");

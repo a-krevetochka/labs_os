@@ -1,10 +1,12 @@
 //#include "child_process.h"
-#define _R_            "\x1b[31m" // red color for child process output color
-#define _G_            "\x1b[32m" // green color for parent process output color
-#define MAX_WORDS 100
-#define MAX_LENGTH 20
-#define FILE_NAME_SIZE 20
-#define CHILD "./child"
+const char _R_[] = "\x1b[31m";// red color for child process output color
+const char _G_[] = "\x1b[32m";// green color for parent process output color
+const char _P_[] = "\x1b[35m";// purple color for errors process output color
+const int MAX_WORDS = 100;
+const int MAX_LENGTH = 20;
+const int FILE_NAME_SIZE = 20;
+const char CHILD[] = "./child";
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -27,8 +29,8 @@ void copy_word(char *source, char *target) {
     target[index + 1] = '\0';
 }
 
-void error_handler(int result_of_creating){
-    if(result_of_creating == -1){
+void error_handler(int result_of_creating) {
+    if (result_of_creating == -1) {
         perror("creating error: ");
         exit(-1);
     }
@@ -41,10 +43,11 @@ int create_process() {
 }
 
 int main() {
+    printf(_R_);
     char first_file_name[FILE_NAME_SIZE], second_file_name[FILE_NAME_SIZE];
     char words[MAX_WORDS][MAX_LENGTH];
 
-    printf(_R_"Enter the first filename: ");
+    printf("Enter the first filename: ");
     scanf("%s", &first_file_name);
 
     printf("Enter the second filename: ");
@@ -81,14 +84,18 @@ int main() {
     pid_t first_process_id = create_process();
 
     if (first_process_id == 0) {
-        printf(_G_"First child process start\n");
+        printf(_G_);
+        printf("First child process start\n");
 
         close(pipe_fd_for_first_child[1]);
-        dup2(pipe_fd_for_first_child[0], STDIN_FILENO);
+        int dup = dup2(pipe_fd_for_first_child[0], STDIN_FILENO);
+        error_handler(dup);
 
         execl(CHILD, CHILD, NULL);
+        perror("Дочерняя программа не была вызвана");
     } else {
-        printf(_R_"parent process ");
+        printf(_R_);
+        printf("parent process ");
 
         close(pipe_fd_for_first_child[0]);
         write(pipe_fd_for_first_child[1], &first_file_name, sizeof(first_file_name));
@@ -96,11 +103,10 @@ int main() {
             write(pipe_fd_for_first_child[1], &long_words[i], sizeof(long_words[i]));
         }
         close(pipe_fd_for_first_child[1]);
+
         printf("Sent data to first process\n");
-
         wait(NULL);
-
-        printf(_R_"first process finish\n");
+        printf("first process finish\n");
     }
 
     int pipe_fd_for_second_child[2];
@@ -109,15 +115,23 @@ int main() {
     pid_t second_process_id = create_process();
 
     if (second_process_id == 0) {
-        printf(_G_"Second child process start\n");
+        printf(_G_);
+        printf("Second child process start\n");
+
         close(pipe_fd_for_first_child[1]);
-        dup2(pipe_fd_for_first_child[0], STDIN_FILENO);
+
+        int dup = dup2(pipe_fd_for_first_child[0], STDIN_FILENO);
+        error_handler(dup);
+
         execl(CHILD, CHILD, NULL);
+        perror("Дочерняя программа не была вызвана");
     } else {
-        printf(_R_"parent process ");
+        printf(_R_);
+        printf("parent process ");
 
         close(pipe_fd_for_first_child[0]);
         write(pipe_fd_for_first_child[1], &second_file_name, sizeof(second_file_name));
+
         for (int i = 0; i < MAX_WORDS; ++i) {
             write(pipe_fd_for_first_child[1], &short_words[i], sizeof(long_words[i]));
         }
@@ -125,6 +139,6 @@ int main() {
 
         printf("Sent data to second process\n");
         wait(NULL);
-        printf(_R_"second process_finish\n");
+        printf("second process_finish\n");
     }
 }

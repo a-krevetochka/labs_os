@@ -1,13 +1,11 @@
 //
 // Created by anton on 20.09.23.
 //
-
-#define _R_            "\x1b[31m" // red color for child process output color
-#define _G_            "\x1b[32m" // green color for parent process output color
-#define _P_            "\x1b[35m" // purple color for errors process output color
-#define MAX_WORDS 100
-#define MAX_LENGTH 20
-#define FILE_NAME_SIZE 20
+const char _G_[] = "\x1b[32m";// green color for parent process output color
+const char _P_[] = "\x1b[35m";// purple color for errors process output color
+const int MAX_WORDS = 100;
+const int MAX_LENGTH = 20;
+const int FILE_NAME_SIZE = 20;
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +44,7 @@ int contain(char letter, char word[MAX_WORDS]) {
 void write_to_file(char filename[FILE_NAME_SIZE], char words[MAX_WORDS][MAX_LENGTH]) {
     FILE *file = fopen(filename, "w");
     if (file == NULL) {
-        printf(_P_"file wasn't open");
+        printf("file wasn't open",_P_);
         exit(-1);
     }
     for (int index_of_word = 0; index_of_word < MAX_WORDS && words[index_of_word][0] != EOF; ++index_of_word) {
@@ -78,22 +76,21 @@ void remove_vowels(char filename[FILE_NAME_SIZE], char words[MAX_WORDS][MAX_LENG
             }
         }
     }
-
-    write_to_file(filename, words);
-    exit(0);
 }
 
 int main() {
+    printf(_G_);
     char filename[FILE_NAME_SIZE];
     read(STDIN_FILENO, &filename, sizeof(filename));
 
 
     char words[MAX_WORDS][MAX_LENGTH];
-    for (int counter_of_input_words = 0; counter_of_input_words < MAX_WORDS ; ++counter_of_input_words) {
+    for (int counter_of_input_words = 0; counter_of_input_words < MAX_WORDS; ++counter_of_input_words) {
         read(STDIN_FILENO, words[counter_of_input_words], sizeof(words[counter_of_input_words]));
     }
 
     remove_vowels(filename, words);
+    write_to_file(filename, words);
 }
 
 

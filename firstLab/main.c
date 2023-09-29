@@ -46,20 +46,37 @@ int main() {
     printf(_R_);
     char first_file_name[FILE_NAME_SIZE], second_file_name[FILE_NAME_SIZE];
     char words[MAX_WORDS][MAX_LENGTH];
-
-    printf("Enter the first filename: ");
-    scanf("%s", &first_file_name);
-
-    printf("Enter the second filename: ");
-    scanf("%s", &second_file_name);
-
     int counter_of_words;
-    printf("Enter the number of words: ");
-    scanf("%d", &counter_of_words);
 
-    printf("Enter the words: ");
-    for (int i = 0; i < counter_of_words; i++) {
-        scanf("%s", words[i]);
+    printf("Will you test it? Enter y/n: ");
+    if(getchar() == 'y'){
+
+        FILE* file = fopen("../tests.txt", "r");
+        if (file == NULL){
+            perror("file wasn't open");
+        }
+
+        fgets(&first_file_name, sizeof(first_file_name), file);
+        fgets(&second_file_name, sizeof(second_file_name), file);
+        counter_of_words = (int)fgetc(file) - 48;
+
+        for (int index_of_word = 0; index_of_word < counter_of_words; ++index_of_word) {
+            fgets(&words[index_of_word], sizeof(words[index_of_word]), file);
+        }
+    } else{
+        printf("Enter the first filename: ");
+        scanf("%s", &first_file_name);
+
+        printf("Enter the second filename: ");
+        scanf("%s", &second_file_name);
+
+        printf("Enter the number of words: ");
+        scanf("%d", &counter_of_words);
+
+        printf("Enter the words: ");
+        for (int i = 0; i < counter_of_words; i++) {
+            scanf("%s", words[i]);
+        }
     }
 
     char short_words[MAX_WORDS][MAX_LENGTH];

@@ -6,5 +6,4 @@ set(CMAKE_C_STANDARD 11)
 
 add_executable(parent main.c)
 
-add_executable(child child_process.c
-child_process.h)
+add_executable(child child_process.c)

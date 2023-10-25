@@ -2,153 +2,139 @@
 // Created by meteo on 11.10.2023.
 //
 #include <iostream>
-#include <windows.h>
-#include <stdlib.h>
-#include <ctime>
+#include <thread>
 #include <fstream>
+#include <cstdlib>
+#include <ctime>
 
-const int MAX_SIZE = 100000;
+const int MAX_ARRAY_SIZE = 50;
+const int MINIMAL_MERGE_SIZE = 32;
 
-int current_index_min_elements = 0;
-int current_index_max_elements = 0;
-
-HANDLE mutex;
-
-using namespace std;
-
-typedef struct thread_arguments {
-    int size;
-    int *part;
-    int *max_elements;
-    int *min_elements;
-} thread_arguments;
-
-DWORD WINAPI find_local_min_and_max_value(LPVOID lpParameter) {
-    thread_arguments *arguments = static_cast<thread_arguments *>(lpParameter);
-
-    int size = arguments->size;
-    int *part = arguments->part;
-    int *max_elements = arguments->max_elements;
-    int *min_elements = arguments->min_elements;
-
-    int local_min = part[0];
-    int local_max = part[0];
-
-    for (int index_of_element = 1; index_of_element < size; ++index_of_element) {
-        if (part[index_of_element] > local_max) {
-            local_max = part[index_of_element];
-        }
-        if (part[index_of_element] < local_min) {
-            local_min = part[index_of_element];
-        }
-    }
-
-    WaitForSingleObject(mutex, INFINITE);
-    max_elements[current_index_max_elements] = local_max;
-    ++current_index_max_elements;
-
-    min_elements[current_index_min_elements] = local_min;
-    ++current_index_min_elements;
-    ReleaseMutex(mutex);
-
-    return 0;
+int min(int first_operand, int second_operand) {
+    return (first_operand < second_operand) ? first_operand : second_operand;
 }
 
-int main(int argc, char **argv) {
-    int threads_count = atoi(argv[1]);
-    int elements_quantity{0};
-    int elements[MAX_SIZE];
-    mutex = CreateMutexA(NULL, FALSE, NULL);
-
-    cout << "do you wanna test me? y/n:\n";
-    if (getchar() == 'y') {
-        ifstream file("test.txt");
-        if (!file.is_open()) {
-            cout << "file was not open";
-            return -1;
-        }
-
-        elements_quantity = MAX_SIZE;
-
-        for (int index_of_element = 0; index_of_element < MAX_SIZE; ++index_of_element) {
-            file >> elements[index_of_element];
-        }
-    } else {
-        cout << "enter the number of elements, number can not be larger than 100000:" << endl;
-        cin >> elements_quantity;
-
-        cout << "Enter the elements:" << endl;
-        for (int index_of_element = 0; index_of_element < elements_quantity; ++index_of_element) {
-            cin >> elements[index_of_element];
-        }
+int minRunLength(int number) {
+    int result = 0;
+    while (number >= MINIMAL_MERGE_SIZE) {
+        result |= (number & 1);
+        number >>= 1;
     }
-
-    unsigned int startTime = clock();
-
-    int size_whole_division = elements_quantity / threads_count;
-    int size_rest = elements_quantity - (size_whole_division * (threads_count - 1));
-
-    int min_elements[threads_count];
-    int max_elements[threads_count];
-
-    HANDLE handleThreadArray[threads_count];
-    DWORD dwordThreadArray[threads_count];
-
-    int part_start_index{0};
-
-    for (int index_of_thread = 0; index_of_thread < threads_count; ++index_of_thread) {
-        if (index_of_thread == threads_count - 1) {
-            thread_arguments *threadArguments = new thread_arguments;
-            threadArguments->max_elements = &max_elements[0];
-            threadArguments->min_elements = &min_elements[0];
-            threadArguments->size = size_rest;
-            threadArguments->part = &elements[part_start_index];
-            handleThreadArray[index_of_thread] = CreateThread(NULL,
-                                                              0,
-                                                              find_local_min_and_max_value,
-                                                              threadArguments,
-                                                              NULL,
-                                                              &dwordThreadArray[index_of_thread]);
-        } else {
-            thread_arguments *threadArguments = new thread_arguments;
-            threadArguments->max_elements = &max_elements[0];
-            threadArguments->min_elements = &min_elements[0];
-            threadArguments->size = size_whole_division;
-            threadArguments->part = &elements[part_start_index];
-            handleThreadArray[index_of_thread] = CreateThread(NULL,
-                                                              0,
-                                                              find_local_min_and_max_value,
-                                                              threadArguments,
-                                                              CREATE_SUSPENDED,
-                                                              &dwordThreadArray[index_of_thread]);
-            part_start_index += size_whole_division;
-        }
-    }
-
-    for (int i = 0; i < threads_count; i++) ResumeThread(handleThreadArray[i]);
-
-    WaitForMultipleObjects(threads_count, handleThreadArray, TRUE, INFINITE);
-    for (int index_of_thread = 0; index_of_thread < threads_count; ++index_of_thread) {
-        CloseHandle(handleThreadArray[index_of_thread]);
-    }
-
-    int absolute_max = max_elements[0];
-    int absolute_min = min_elements[0];
-
-    for (int index_of_element = 1; index_of_element < threads_count; ++index_of_element) {
-        if (max_elements[index_of_element] > absolute_max) {
-            absolute_max = max_elements[index_of_element];
-        }
-        if (min_elements[index_of_element] < absolute_min) {
-            absolute_min = min_elements[index_of_element];
-        }
-    }
-
-    cout << "minimal element is: " << absolute_min << endl;
-    cout << "maximal element is: " << absolute_max << endl;
-
-    unsigned int endTime = clock();
-    cout << "program ran for " << (endTime - startTime) << " ms with " << threads_count << " threads";
-
-    return 0;
+    return number + result;
 }
+
+void insertionSort(int* array, int left, int right) {
+    for (int index = left + 1; index <= right; index++) {
+        int key = array[index];
+        int support_index = index - 1;
+        while (support_index >= left && array[support_index] > key) {
+            array[support_index + 1] = array[support_index];
+            support_index--;
+        }
+        array[support_index + 1] = key;
+    }
+}
+
+void merge(int* array, int left_start_index, int middle_index, int right_start_index) {
+    int first_part_length = middle_index - left_start_index + 1;
+    int second_part_length = right_start_index - middle_index;
+    int* left = new int[first_part_length];
+    int* right = new int[second_part_length];
+
+    for (int index_of_element = 0; index_of_element < first_part_length; index_of_element++)
+        left[index_of_element] = array[left_start_index + index_of_element];
+
+    for (int i = 0; i < second_part_length; i++)
+        right[i] = array[middle_index + 1 + i];
+
+    int first_index = 0, second_index = 0, left_size_index = left_start_index;
+    while (first_index < first_part_length && second_index < second_part_length) {
+        if (left[first_index] <= right[second_index]) {
+            array[left_size_index] = left[first_index];
+            first_index++;
+        }
+        else {
+            array[left_size_index] = right[second_index];
+            second_index++;
+        }
+        left_size_index++;
+    }
+
+    while (first_index < first_part_length) {
+        array[left_size_index] = left[first_index];
+        left_size_index++;
+        first_index++;
+    }
+
+    while (second_index < second_part_length) {
+        array[left_size_index] = right[second_index];
+        left_size_index++;
+        second_index++;
+    }
+}
+
+void timSort(int* array, int lenght) {
+
+    int minimal_run = minRunLength(MINIMAL_MERGE_SIZE);
+
+    for (int i = 0; i < lenght; i += minimal_run)
+        insertionSort(array, i, min(i + minimal_run - 1, lenght - 1));
+
+    for (int size = minimal_run; size < lenght; size = 2 * size) {
+        for (int left = 0; left < lenght; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (lenght - 1));
+            merge(array, left, mid, right);
+        }
+    }
+}
+
+int main(int argc, char** argv) {
+    int number_of_threads = atoi(argv[1]);
+    int array[MAX_ARRAY_SIZE]; // Исходный массив для сортировки
+    std::cout << "Do u want to test me? y/n" << std::endl;
+
+    if (getchar() == 'y'){
+        std::ifstream inputFile("test.txt");
+
+        for (int i = 0; i < MAX_ARRAY_SIZE; ++i) {
+            inputFile >> array[i];
+        }
+        inputFile.close();
+    } else{
+        std::cout << "Enter 50 numbers: ";
+        for (int i = 0; i < MAX_ARRAY_SIZE; i++) {
+            std::cin >> array[i];
+        }
+    }
+
+    std::thread threads[number_of_threads];
+    int chunkSize = MAX_ARRAY_SIZE / number_of_threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int index_of_tread = 0; index_of_tread < number_of_threads; index_of_tread++) {
+        int startIndex = index_of_tread * chunkSize;
+        int endIndex = (index_of_tread == number_of_threads - 1) ? MAX_ARRAY_SIZE : (index_of_tread + 1) * chunkSize;
+
+        threads[index_of_tread] = std::thread(timSort, array + startIndex, endIndex - startIndex);
+    }
+
+    // Ожидание завершения всех потоков
+    for (int index_of_thread = 0; index_of_thread < number_of_threads; index_of_thread++) {
+        threads[index_of_thread].join();
+    }
+
+    timSort(array, MAX_ARRAY_SIZE);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    for (int i = 0; i < MAX_ARRAY_SIZE; i++) {
+        std::cout << array[i] << " ";
+    }
+    std::cout << "\nDuration: " << duration.count() << " ms" << std::endl;
+}
+
+
+

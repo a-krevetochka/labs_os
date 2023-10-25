@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.26)
 
-project(firstLab C)
+project(firstLab)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(parent main.c)
+add_executable(parent main.cpp)
 
-add_executable(child child_process.c
-child_process.h)
+add_executable(child child_process.cpp)

@@ -35,6 +35,7 @@ void copy_word(char *source, char *target) {
 int main(){
     char words[MAX_WORDS][MAX_LENGTH];
     int counter_of_words;
+    cout << "do you wanna test me? y/n" << endl;
     if (getchar() == 'y'){
         std::ifstream file("test.txt");
         counter_of_words = MAX_WORDS;
